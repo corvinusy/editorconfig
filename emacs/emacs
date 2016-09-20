@@ -1,5 +1,7 @@
-;;; package --- Summary
-;;; Commentary: marat.kagarmanov emacs settings
+;;; packages --- Summary
+
+;;; Commentary:
+;;; marat.kagarmanov's Emacs settings
 
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
@@ -55,9 +57,9 @@
 
 ;;; Code:
 ;; SBCL
-(setq inferior-lisp-program "/usr/bin/sbcl") ; your Lisp system
-(setq slime-lisp-implementations '((sbcl ("sbcl"))))
-(setq slime-startup-animation nil)
+'(setq inferior-lisp-program "/usr/bin/sbcl") ; your Lisp system
+'(setq slime-lisp-implementations '((sbcl ("sbcl"))))
+'(setq slime-startup-animation nil)
 
 ;; Global Settings
 (setq inhibit-startup-message t)    ;; skip start screen
@@ -65,6 +67,10 @@
 (setq auto-save-default nil)        ;; no autosave
 (setq-default indent-tabs-mode nil) ;; indent with spaces by default (for html and others)
 (ffap-bindings)                     ;; find-file-at-point ON
+(font-lock-add-keywords 'go-mode    ;; coloring words like FIXME: or TODO: (currently for go-mode only)
+                        '(("\\<\\(FIX\\|TODO\\|FIXME\\|HACK\\|REFACTOR\\):"
+                           1 font-lock-warning-face t)))
+
 
 ;; Global key settings
 (global-set-key [mode-line mouse-2] 'ignore)                   ;; disable middle clicking at mode-line
@@ -79,26 +85,16 @@
 ;(global-set-key [kp-subtract] 'undo) ; [Undo]
 
 ;;; Packages
-(add-to-list 'load-path (expand-file-name "~/.emacs.d/elpa")) ;;specify extension dir
-(add-to-list 'load-path (expand-file-name "~/.emacs.d/lisp")) ;;user-scripts
+(add-to-list 'load-path (expand-file-name "~/.emacs.d/elpa")) ;; extension dir
+(add-to-list 'load-path (expand-file-name "~/.emacs.d/lisp")) ;; user-scripts dir
 (load "package")
 (require 'package)
 ;;(add-to-list 'package-archives
-;;             '("melpa-stable" . "http://stable.melpa.org/packages/") t) ;; breaks are made for cowards))
+;;             '("melpa-stable" . "http://stable.melpa.org/packages/") t)
 (setq package-archives '(("gnu" . "http://elpa.gnu.org/packages/")
                          ("marmalade" . "http://marmalade-repo.org/packages/")
-                         ("melpa" . "http://melpa.org/packages/")))
+                         ("melpa" . "http://melpa.org/packages/"))) ;; breaks are made for cowards
 (package-initialize)
-
-;; Elscreen-fr: replacement for 'elscreen' that using main emacs frame header for screens
-(use-package elscreen-fr
-  :config
-  (progn
-    (elscreen-fr-start)
-    ;; elscreen keys should be redefined after (elscreen-fr-start)
-    (global-set-key (kbd "C-z SPC") 'elscreen-jump-0)
-    (global-set-key (kbd "C-z <left>") 'elscreen-previous)
-    (global-set-key (kbd "C-z <right>")  'elscreen-next)))
 
 ;; autosave: on lost focus
 (use-package focus-autosave-mode
@@ -131,8 +127,18 @@
 ;; cycbuf
 (use-package cycbuf
   :init
-  (global-set-key [M-up] 'cycbuf-switch-to-previous-buffer)
-  (global-set-key [M-down] 'cycbuf-switch-to-next-buffer))
+  (global-set-key [M-up] 'cycbuf-switch-to-previous-buffer) ;; Alt-Up to change buffer
+  (global-set-key [M-down] 'cycbuf-switch-to-next-buffer))  ;; Alt-Down to change buffer
+
+;; elscreen-fr: replacement for 'elscreen' that using main emacs frame header for screens
+(use-package elscreen-fr
+  :config
+  (progn
+    (elscreen-fr-start)
+    ;; elscreen keys should be redefined after (elscreen-fr-start)
+    (global-set-key (kbd "C-z SPC") 'elscreen-jump-0)
+    (global-set-key (kbd "C-z <left>") 'elscreen-previous)
+    (global-set-key (kbd "C-z <right>")  'elscreen-next)))
 
 ;;flycheck
 (use-package flycheck
@@ -147,16 +153,6 @@
     (ac-config-default)
     (define-key ac-mode-map (kbd "C-TAB") 'auto-complete)))
 
-;;gometalinter
-(use-package flycheck-gometalinter
-  :init
-  (setq flycheck-gometalinter-vendor t) ; skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1
-  (setq flycheck-gometalinter-disable-linters '("dupl"))  ; disable selected linters
-  (setq flycheck-gometalinter-deadline "30s")
-  :config
-  (progn
-    (flycheck-gometalinter-setup)))
-
 ;;go-mode
 (use-package go-mode
   :mode "\\.go\\'"
@@ -164,10 +160,16 @@
   (add-hook 'before-save-hook 'gofmt-before-save t)
   (go-guru-hl-identifier-mode))
 
-;; coloring words like FIXME: or TODO: (currently for go-mode only)
-(font-lock-add-keywords 'go-mode
-                        '(("\\<\\(FIX\\|TODO\\|FIXME\\|HACK\\|REFACTOR\\):"
-                           1 font-lock-warning-face t)))
+;;gometalinter
+(use-package flycheck-gometalinter
+  :init
+  (setq flycheck-gometalinter-vendor t)                   ; skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1
+  (setq flycheck-gometalinter-disable-linters '("dupl"))  ; disable selected linters
+  (setq flycheck-gometalinter-deadline "30s")             ; ttl of gometalinter call. Big projects use much time.
+  :config
+  (progn
+    (flycheck-gometalinter-setup)))
+
 
 ;; js2-minor-mode
 (add-hook 'js-mode-hook 'js2-minor-mode)
