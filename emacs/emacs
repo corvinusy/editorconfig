@@ -1,0 +1,237 @@
+;;; package --- Summary
+;;; Commentary: marat.kagarmanov emacs settings
+
+
+(custom-set-variables
+ ;; custom-set-variables was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(beacon-blink-delay 0.7)
+ '(beacon-blink-duration 0.7)
+ '(beacon-blink-when-focused t)
+ '(beacon-mode t)
+ '(blink-matching-paren nil)
+ '(case-fold-search nil)
+ '(column-number-mode t)
+ '(compilation-message-face (quote default))
+ '(cua-enable-cua-keys nil)
+ '(cua-mode t nil (cua-base))
+ '(cua-normal-cursor-color "black")
+ '(cycbuf-dont-show-regexp (quote ("^ " "^*cycbuf*$" "^*.*$")))
+ '(explicit-shell-file-name "/bin/bash")
+ '(global-auto-revert-mode t)
+ '(indent-tabs-mode nil)
+ '(initial-scratch-message ";;")
+ '(line-number-display-limit-width 120)
+ '(magit-diff-use-overlays nil)
+ '(make-backup-files nil)
+ '(neo-window-width 40)
+ '(package-selected-packages
+   (quote
+    (zenburn-theme yaml-mode web-mode web-completion-data use-package toml-mode solarized-theme smartparens sed-mode rainbow-delimiters pkgbuild-mode php-mode neotree monokai-theme markdown-mode js2-mode go-rename go-impl go-guru go-add-tags git-gutter focus-autosave-mode flymake-go flycheck-gometalinter epm elscreen-fr dockerfile-mode cycbuf color-theme beacon auto-complete)))
+ '(recentf-exclude nil)
+ '(recentf-max-saved-items 30)
+ '(recentf-mode t)
+ '(recentf-save-file "~/.emacs.d/.recentf")
+ '(show-paren-mode t)
+ '(size-indication-mode t)
+ '(speedbar-show-unknown-files t)
+ '(speedbar-update-flag nil)
+ '(sql-product (quote postgres))
+ '(tab-stop-list
+   (quote
+    (4 8 12 16 20 24 28 32 36 40 44 48 52 56 60 64 68 72 76)))
+ '(tab-width 4)
+ '(tool-bar-mode nil)
+ '(word-wrap nil))
+
+(custom-set-faces
+ ;; custom-set-faces was added by Custom.
+ ;; If you edit it by hand, you could mess it up, so be careful.
+ ;; Your init file should contain only one such instance.
+ ;; If there is more than one, they won't work right.
+ '(default ((t (:family "Inconsolata LGC" :foundry "PfEd" :slant normal :weight normal :height 98 :width normal))))
+ '(cycbuf-current-face ((t (:background "dark slate gray" :weight bold)))))
+
+;;; Code:
+;; SBCL
+(setq inferior-lisp-program "/usr/bin/sbcl") ; your Lisp system
+(setq slime-lisp-implementations '((sbcl ("sbcl"))))
+(setq slime-startup-animation nil)
+
+;; Settings
+(setq inhibit-startup-message t) ;;
+(fset 'yes-or-no-p 'y-or-n-p) ;;'y' always enough for 'yes'
+(setq auto-save-default nil);; autosave disabling
+(setq-default indent-tabs-mode nil)
+(ffap-bindings) ;; open file at cursor
+
+;; Global key settings
+(global-set-key [mode-line mouse-2] 'ignore) ;; disable middle clicking at mode-line
+(global-set-key [?\C-x ?\z] 'ansi-term) ;; shell
+(global-set-key [?\M-g] 'goto-line) ;; goto line
+(global-set-key [?\C-x ?\C-b] 'bs-show) ;; comfort buffer selector
+(global-set-key [?\C-x ?\C-k] 'kill-some-buffers) ;; mass buffer kill
+(global-set-key (kbd "<M-next>") 'next-multiframe-window)
+(global-set-key (kbd "<M-prior>") 'previous-multiframe-window)
+(global-set-key [?\M-s] 'tags-search)
+;(global-set-key [kp-subtract] 'undo) ; [Undo]
+
+;;; Packages
+(add-to-list 'load-path (expand-file-name "~/.emacs.d/elpa")) ;;specify extension dir
+(add-to-list 'load-path (expand-file-name "~/.emacs.d/lisp")) ;;user-scripts
+(load "package")
+(require 'package)
+;;(add-to-list 'package-archives
+;;             '("melpa-stable" . "http://stable.melpa.org/packages/") t)
+(setq package-archives '(("gnu" . "http://elpa.gnu.org/packages/")
+                         ("marmalade" . "http://marmalade-repo.org/packages/")
+                         ("melpa" . "http://melpa.org/packages/")))
+(package-initialize)
+
+;; Elscreen-fr
+(require 'elscreen-fr)
+;;(require 'elscreen-buffer-group)
+(elscreen-fr-start)
+;;elscreen keys
+(global-set-key (kbd "C-z SPC") 'elscreen-jump-0)
+(global-set-key (kbd "C-z <left>") 'elscreen-previous)
+(global-set-key (kbd "C-z <right>")  'elscreen-next)
+
+
+;;autosave
+(use-package focus-autosave-mode
+  :config
+  (progn
+    (focus-autosave-mode)))
+
+;;auto-complete
+(use-package auto-complete
+ :config
+ (add-to-list 'ac-dictionary-directories "~/.emacs.d/ac-dict")
+ (progn
+   (ac-config-default)
+   ;; make completion only by TAB
+   ;(setq ac-auto-start nil)
+   ;(ac-set-trigger-key "TAB")
+   (auto-complete-mode 4)))
+
+;;color-theme
+(use-package color-theme
+   :init
+   (color-theme-initialize)
+   (load-theme 'monokai t))
+   ;:config
+   ;(color-theme-arjen))
+
+;;beacon
+(use-package beacon
+  :init
+  (beacon-mode 1))
+
+;; cycbuf
+(use-package cycbuf
+  :init
+  (global-set-key [M-up] 'cycbuf-switch-to-previous-buffer)
+  (global-set-key [M-down] 'cycbuf-switch-to-next-buffer))
+
+;;flycheck
+(use-package flycheck
+  :init
+  (add-hook 'prog-mode-hook (lambda () (flycheck-mode))))
+
+;;gometalinter
+(use-package flycheck-gometalinter
+  :ensure t
+  :init
+  (setq flycheck-gometalinter-vendor t) ; skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1
+  (setq flycheck-gometalinter-disable-linters '("dupl"))  ; disable selected linters
+  (setq flycheck-gometalinter-deadline "30s")
+  :config
+  (progn
+    (flycheck-gometalinter-setup)))
+
+;;go-mode
+(use-package go-mode
+  :mode "\\.go\\'"
+  :init
+  (add-hook 'before-save-hook 'gofmt-before-save t)
+  (go-guru-hl-identifier-mode))
+
+;; FIXME:
+(font-lock-add-keywords 'go-mode
+                        '(("\\<\\(FIX\\|TODO\\|FIXME\\|HACK\\|REFACTOR\\):"
+                           1 font-lock-warning-face t)))
+
+;; js2-minor-mode
+(add-hook 'js-mode-hook 'js2-minor-mode)
+
+;;markdown-mode
+(use-package markdown-mode
+  :mode (("\\.md\\'" . markdown-mode)
+         ("\\.markdown\\'" . markdown-mode)
+         ("\\.text\\'" . markdown-mode)))
+
+;; neotree
+(use-package neotree
+  :init
+  (global-set-key [f8] 'neotree-toggle))
+
+;;rainbow-delimiters
+(use-package rainbow-delimiters
+  :init
+  (add-hook 'prog-mode-hook 'rainbow-delimiters-mode))
+
+;;smartparens
+(use-package smartparens
+  :config
+  (progn
+    (smartparens-global-mode 1)))
+
+;; web-mode
+(use-package web-mode
+  :mode (("\\.phtml\\'" . web-mode)
+         ("\\.tpl\\.php\\'" . web-mode)
+         ("\\.[agj]sp\\'" . web-mode)
+         ("\\.as[cp]x\\'" . web-mode)
+         ("\\.erb\\'" . web-mode)
+         ("\\.mustache\\'" . web-mode)
+         ("\\.djhtml\\'" . web-mode)
+         ("\\.html?\\'" . web-mode)))
+
+
+
+;; installed packages
+;; auto-complete
+;; beacon
+;; color-theme
+;; cycbuf
+;; dockerfile-mode
+;; elscreen-fr
+;; epm
+;; flycheck-gometalinter
+;; flymake-go
+;; focus-autosave-mode
+;; git-gutter
+;; go-add-tags
+;; go-guru
+;; go-impl
+;; go-rename
+;; js2-mode
+;; markdown-mode
+;; monokai-theme
+;; neotree
+;; php-mode
+;; pkgbuild-mode
+;; rainbow-delimiters
+;; sed-mode
+;; smartparens
+;; solarized-theme
+;; toml-mode
+;; use-package
+;; web-completion-data
+;; web-mode
+;; yaml-mode
+;; zenburn-theme
+;;; .emacs ends here
