@@ -15,22 +15,23 @@
  '(blink-matching-paren nil)
  '(case-fold-search nil)
  '(column-number-mode t)
- '(compilation-message-face (quote default))
  '(cua-enable-cua-keys nil)
  '(cua-mode t nil (cua-base))
  '(cua-normal-cursor-color "black")
- '(cycbuf-dont-show-regexp (quote ("^ " "^*cycbuf*$" "^*.*$")))
  '(explicit-shell-file-name "/bin/bash")
  '(global-auto-revert-mode t)
  '(indent-tabs-mode nil)
  '(initial-scratch-message ";;")
  '(line-number-display-limit-width 120)
- '(magit-diff-use-overlays nil)
  '(make-backup-files nil)
  '(neo-window-width 40)
  '(package-selected-packages
    (quote
-    (go-autocomplete go-complete yaml-mode web-mode web-completion-data use-package toml-mode smartparens sed-mode rainbow-delimiters pkgbuild-mode php-mode neotree monokai-theme markdown-mode js2-mode go-rename go-impl go-guru go-add-tags git-gutter focus-autosave-mode flymake-go flycheck-gometalinter epm elscreen-fr dockerfile-mode cycbuf color-theme beacon auto-complete)))
+    (go-gen-test kotlin-mode restclient rg vue-html-mode vue-mode gitlab gitlab-ci-mode go-dlv flycheck-golangci-lint emacsql-psql tern xref-js2 docker-compose-mode go-snippets go-tag merlin utop tuareg color-theme-modern color-theme-monokai env-var-import go-autocomplete go-complete yaml-mode web-mode web-completion-data use-package toml-mode smartparens sed-mode rainbow-delimiters pkgbuild-mode php-mode neotree monokai-theme markdown-mode js2-mode go-rename go-impl go-guru go-add-tags git-gutter focus-autosave-mode epm elscreen-fr dockerfile-mode cycbuf beacon auto-complete)))
+ '(quote
+   (cycbuf-dont-show-regexp
+    (quote
+     ("^ " "^*cycbuf*$" "^*.*$"))))
  '(recentf-exclude nil)
  '(recentf-max-saved-items 30)
  '(recentf-mode t)
@@ -52,14 +53,9 @@
  ;; If you edit it by hand, you could mess it up, so be careful.
  ;; Your init file should contain only one such instance.
  ;; If there is more than one, they won't work right.
- '(default ((t (:family "Inconsolata LGC" :foundry "PfEd" :slant normal :weight normal :height 98 :width normal))))
+ '(default ((t (:family "Hack" :foundry "simp" :slant normal :weight normal :height 100 :width normal))))
  '(cycbuf-current-face ((t (:background "dark slate gray" :weight bold)))))
 
-;;; Code:
-;; SBCL
-'(setq inferior-lisp-program "/usr/bin/sbcl") ; your Lisp system
-'(setq slime-lisp-implementations '((sbcl ("sbcl"))))
-'(setq slime-startup-animation nil)
 
 ;; Global Settings
 (setq inhibit-startup-message t)    ;; skip start screen
@@ -82,6 +78,17 @@
 (global-set-key (kbd "<M-prior>") 'previous-multiframe-window) ;; Alt-PgDn to previous frame window
 (global-set-key [?\M-\;] 'comment-region)                      ;; shorcut for commenting selected text
 (global-set-key [?\C-\;] 'uncomment-region)                    ;; shorcut for uncommenting selected text
+;; duplicate line
+(defun duplicate-line()
+  (interactive)
+  (move-beginning-of-line 1)
+  (kill-line)
+  (yank)
+  (open-line 1)
+  (next-line 1)
+  (yank)
+)
+(global-set-key [?\C-x ?\C-d] 'duplicate-line)
 ;(global-set-key [kp-subtract] 'undo) ; [Undo]
 
 ;;; Packages
@@ -99,105 +106,108 @@
 ;; autosave: on lost focus
 (use-package focus-autosave-mode
   :config
-  (progn
-    (focus-autosave-mode)))
+  (focus-autosave-mode 1))
 
-;; ;; auto-complete replaced by go-autocomplete. Still usable if golang is off.
-;; (use-package auto-complete
-;;  :config
-;;  (add-to-list 'ac-dictionary-directories "~/.emacs.d/ac-dict")
-;;  (progn
-;;    (ac-config-default)
-;;    ;; to make completion only by TAB
-;;    ;(setq ac-auto-start nil)
-;;    ;(ac-set-trigger-key "TAB")
-;;    (auto-complete-mode 1)))
+;; auto-complete replaced by go-autocomplete. Still usable if golang is off.
+(use-package auto-complete
+ :config
+ (add-to-list 'ac-dictionary-directories "~/.emacs.d/ac-dict")
+ (progn
+   (ac-config-default)
+   ;; to make completion only by TAB
+   ;(setq ac-auto-start nil)
+   ;(ac-set-trigger-key "TAB")
+   (auto-complete-mode 1)))
 
 ;;color-theme
-(use-package color-theme
-   :init
-   (color-theme-initialize)
-   (load-theme 'monokai t))
+(use-package color-theme-monokai
+  :ensure t
+  :init
+  (load-theme 'monokai t t)
+  (enable-theme 'monokai))
 
 ;;beacon
 (use-package beacon
+  :ensure t
   :init
   (beacon-mode 1))
 
 ;; cycbuf
 (use-package cycbuf
-  :init
-  (global-set-key [M-up] 'cycbuf-switch-to-previous-buffer) ;; Alt-Up to change buffer
-  (global-set-key [M-down] 'cycbuf-switch-to-next-buffer))  ;; Alt-Down to change buffer
+  :ensure t
+  :config
+  (global-set-key (kbd "C-x <down>") 'cycbuf-switch-to-previous-buffer) 
+  (global-set-key (kbd "C-x <up>") 'cycbuf-switch-to-next-buffer))
 
 ;; elscreen-fr: replacement for 'elscreen' that using main emacs frame header for screens
 (use-package elscreen-fr
   :config
-  (progn
-    (elscreen-fr-start)
-    ;; elscreen keys should be redefined after (elscreen-fr-start)
-    (global-set-key (kbd "C-z SPC") 'elscreen-jump-0)
-    (global-set-key (kbd "C-z <left>") 'elscreen-previous)
-    (global-set-key (kbd "C-z <right>")  'elscreen-next)))
-
-;;flycheck
-(use-package flycheck
-  :init
-  (add-hook 'prog-mode-hook (lambda () (flycheck-mode))))
-
-;; go-autocomplete
-(use-package go-autocomplete
-  :config
-  (progn
-    (require 'auto-complete-config)
-    (ac-config-default)
-    (define-key ac-mode-map (kbd "C-TAB") 'auto-complete)))
+  (elscreen-fr-start)
+  ;; elscreen keys should be redefined after (elscreen-fr-start)
+  (global-set-key (kbd "C-z SPC") 'elscreen-jump-0)
+  (global-set-key (kbd "C-z <left>") 'elscreen-previous)
+  (global-set-key (kbd "C-z <right>")  'elscreen-next))
 
 ;;go-mode
 (use-package go-mode
+  :ensure t
   :mode "\\.go\\'"
   :init
-  (add-hook 'before-save-hook 'gofmt-before-save t)
-  (go-guru-hl-identifier-mode))
+  (setq go-guess-gopath-functions (quote (go-plain-gopath)))
+  :bind ("C-c C-r" . go-rename)
+  :hook (before-save . gofmt-before-save))
 
-;;gometalinter
-(use-package flycheck-gometalinter
-  :init
-  (setq flycheck-gometalinter-vendor t)                   ; skips 'vendor' directories and sets GO15VENDOREXPERIMENT=1
-  (setq flycheck-gometalinter-disable-linters '("dupl"))  ; disable selected linters
-  (setq flycheck-gometalinter-deadline "30s")             ; ttl of gometalinter call. Big projects use much time.
-  :config
-  (progn
-    (flycheck-gometalinter-setup)))
+(use-package flycheck-golangci-lint
+  :ensure t
+  :hook (go-mode . flycheck-golangci-lint-setup))
 
-
-;; js2-minor-mode
-(add-hook 'js-mode-hook 'js2-minor-mode)
+;; js2-mode
+(use-package js2-mode
+  :mode (("\\.js\\'" . js2-mode))
+  ;; Better imenu
+  :hook ((js-mode . js2-minor-mode)
+         (js2-mode . js2-imenu-extras-mode)))
 
 ;;markdown-mode
 (use-package markdown-mode
+  :ensure t
   :mode (("\\.md\\'" . markdown-mode)
          ("\\.markdown\\'" . markdown-mode)
          ("\\.text\\'" . markdown-mode)))
 
 ;; neotree
 (use-package neotree
+  :ensure t
   :init
-  (global-set-key [f8] 'neotree-toggle))
+  (global-set-key [f8] 'neotree-toggle)
+  (global-set-key [f9] 'neotree-refresh))
 
 ;;rainbow-delimiters
 (use-package rainbow-delimiters
-  :init
-  (add-hook 'prog-mode-hook 'rainbow-delimiters-mode))
+  :ensure t
+  :hook (prog-mode . rainbow-delimiters-mode))
 
 ;;smartparens
 (use-package smartparens
+  :ensure t
   :config
-  (progn
-    (smartparens-global-mode 1)))
+  (smartparens-global-mode 1))
+
+;;tuareg
+(use-package tuareg
+  :ensure t
+  :mode (("\\.ml[ily]?$" . tuareg-mode)
+         ("\\.topml$" . tuareg-mode))
+  :init
+  (setq merlin-use-auto-complete-mode t) 
+  (setq merlin-error-after-save nil)
+  (setq opam-share (substring (shell-command-to-string "opam config var share") 0 -1))
+  :hook ((tuareg-mode . tuareg-imenu-set-imenu)
+         (tuareg-mode . merlin-mode)))
 
 ;; web-mode
 (use-package web-mode
+  :ensure t
   :mode (("\\.phtml\\'" . web-mode)
          ("\\.tpl\\.php\\'" . web-mode)
          ("\\.[agj]sp\\'" . web-mode)
