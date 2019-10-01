@@ -3,6 +3,7 @@
 ;;; Commentary:
 ;;; marat.kagarmanov's Emacs settings
 
+;;; Code:
 (custom-set-variables
  ;; custom-set-variables was added by Custom.
  ;; If you edit it by hand, you could mess it up, so be careful.
@@ -27,7 +28,7 @@
  '(neo-window-width 40)
  '(package-selected-packages
    (quote
-    (go-gen-test kotlin-mode restclient rg vue-html-mode vue-mode gitlab gitlab-ci-mode go-dlv flycheck-golangci-lint emacsql-psql tern xref-js2 docker-compose-mode go-snippets go-tag merlin utop tuareg color-theme-modern color-theme-monokai env-var-import go-autocomplete go-complete yaml-mode web-mode web-completion-data use-package toml-mode smartparens sed-mode rainbow-delimiters pkgbuild-mode php-mode neotree monokai-theme markdown-mode js2-mode go-rename go-impl go-guru go-add-tags git-gutter focus-autosave-mode epm elscreen-fr dockerfile-mode cycbuf beacon auto-complete)))
+    (flycheck-ocaml flycheck-golangci-lint flycheck-rust rust-mode merlin utop tuareg color-theme-modern color-theme-monokai env-var-import go-autocomplete go-complete yaml-mode web-mode web-completion-data use-package toml-mode smartparens sed-mode rainbow-delimiters pkgbuild-mode php-mode neotree monokai-theme markdown-mode js2-mode go-rename go-impl go-guru go-add-tags git-gutter focus-autosave-mode epm elscreen-fr dockerfile-mode cycbuf beacon auto-complete)))
  '(quote
    (cycbuf-dont-show-regexp
     (quote
@@ -36,6 +37,7 @@
  '(recentf-max-saved-items 30)
  '(recentf-mode t)
  '(recentf-save-file "~/.emacs.d/.recentf")
+ '(ring-bell-function (quote ignore))
  '(show-paren-mode t)
  '(size-indication-mode t)
  '(speedbar-show-unknown-files t)
@@ -46,6 +48,7 @@
     (4 8 12 16 20 24 28 32 36 40 44 48 52 56 60 64 68 72 76)))
  '(tab-width 4)
  '(tool-bar-mode nil)
+ '(visible-bell 1)
  '(word-wrap nil))
 
 (custom-set-faces
@@ -78,17 +81,6 @@
 (global-set-key (kbd "<M-prior>") 'previous-multiframe-window) ;; Alt-PgDn to previous frame window
 (global-set-key [?\M-\;] 'comment-region)                      ;; shorcut for commenting selected text
 (global-set-key [?\C-\;] 'uncomment-region)                    ;; shorcut for uncommenting selected text
-;; duplicate line
-(defun duplicate-line()
-  (interactive)
-  (move-beginning-of-line 1)
-  (kill-line)
-  (yank)
-  (open-line 1)
-  (next-line 1)
-  (yank)
-)
-(global-set-key [?\C-x ?\C-d] 'duplicate-line)
 ;(global-set-key [kp-subtract] 'undo) ; [Undo]
 
 ;;; Packages
@@ -106,7 +98,8 @@
 ;; autosave: on lost focus
 (use-package focus-autosave-mode
   :config
-  (focus-autosave-mode 1))
+  (progn
+    (focus-autosave-mode)))
 
 ;; auto-complete replaced by go-autocomplete. Still usable if golang is off.
 (use-package auto-complete
@@ -121,93 +114,96 @@
 
 ;;color-theme
 (use-package color-theme-monokai
-  :ensure t
-  :init
-  (load-theme 'monokai t t)
-  (enable-theme 'monokai))
+    :init
+    (load-theme 'monokai t t)
+    (enable-theme 'monokai))
 
 ;;beacon
 (use-package beacon
-  :ensure t
   :init
   (beacon-mode 1))
 
 ;; cycbuf
 (use-package cycbuf
-  :ensure t
-  :config
-  (global-set-key (kbd "C-x <down>") 'cycbuf-switch-to-previous-buffer) 
-  (global-set-key (kbd "C-x <up>") 'cycbuf-switch-to-next-buffer))
+  :init
+  (global-set-key [M-up] 'cycbuf-switch-to-previous-buffer) ;; Alt-Up to change buffer
+  (global-set-key [M-down] 'cycbuf-switch-to-next-buffer))  ;; Alt-Down to change buffer
 
 ;; elscreen-fr: replacement for 'elscreen' that using main emacs frame header for screens
 (use-package elscreen-fr
   :config
-  (elscreen-fr-start)
-  ;; elscreen keys should be redefined after (elscreen-fr-start)
-  (global-set-key (kbd "C-z SPC") 'elscreen-jump-0)
-  (global-set-key (kbd "C-z <left>") 'elscreen-previous)
-  (global-set-key (kbd "C-z <right>")  'elscreen-next))
+  (progn
+    (elscreen-fr-start)
+    ;; elscreen keys should be redefined after (elscreen-fr-start)
+    (global-set-key (kbd "C-z SPC") 'elscreen-jump-0)
+    (global-set-key (kbd "C-z <left>") 'elscreen-previous)
+    (global-set-key (kbd "C-z <right>")  'elscreen-next)))
+
+;; flycheck
+(use-package flycheck
+  :ensure t
+  :init (global-flycheck-mode))
 
 ;;go-mode
 (use-package go-mode
-  :ensure t
   :mode "\\.go\\'"
   :init
   (setq go-guess-gopath-functions (quote (go-plain-gopath)))
-  :bind ("C-c C-r" . go-rename)
-  :hook (before-save . gofmt-before-save))
+  (add-hook 'before-save-hook 'gofmt-before-save t)
+  ;;(go-guru-hl-identifier-mode)
+  )
+  (global-set-key [?\C-c ?\C-r] 'go-rename)
 
+;; golangci-lint
 (use-package flycheck-golangci-lint
   :ensure t
   :hook (go-mode . flycheck-golangci-lint-setup))
 
-;; js2-mode
-(use-package js2-mode
-  :mode (("\\.js\\'" . js2-mode))
-  ;; Better imenu
-  :hook ((js-mode . js2-minor-mode)
-         (js2-mode . js2-imenu-extras-mode)))
+;; js2-minor-mode
+(add-hook 'js-mode-hook 'js2-minor-mode)
 
 ;;markdown-mode
+;; (use-package markdown-mode
+;;   :mode (("\\.md\\'" . markdown-mode)
+;;          ("\\.markdown\\'" . markdown-mode)
+;;          ("\\.text\\'" . markdown-mode)))
 (use-package markdown-mode
   :ensure t
-  :mode (("\\.md\\'" . markdown-mode)
-         ("\\.markdown\\'" . markdown-mode)
-         ("\\.text\\'" . markdown-mode)))
+  :commands (markdown-mode gfm-mode)
+  :mode (("README\\.md\\'" . gfm-mode)
+         ("\\.md\\'" . markdown-mode)
+         ("\\.markdown\\'" . markdown-mode))
+  :init (setq markdown-command "multimarkdown"))
 
 ;; neotree
 (use-package neotree
-  :ensure t
   :init
   (global-set-key [f8] 'neotree-toggle)
   (global-set-key [f9] 'neotree-refresh))
 
 ;;rainbow-delimiters
 (use-package rainbow-delimiters
-  :ensure t
-  :hook (prog-mode . rainbow-delimiters-mode))
+  :init
+  (add-hook 'prog-mode-hook 'rainbow-delimiters-mode))
 
 ;;smartparens
 (use-package smartparens
-  :ensure t
   :config
-  (smartparens-global-mode 1))
+  (progn
+    (smartparens-global-mode 1)))
 
 ;;tuareg
 (use-package tuareg
-  :ensure t
   :mode (("\\.ml[ily]?$" . tuareg-mode)
          ("\\.topml$" . tuareg-mode))
   :init
-  (setq merlin-use-auto-complete-mode t) 
-  (setq merlin-error-after-save nil)
-  (setq opam-share (substring (shell-command-to-string "opam config var share") 0 -1))
-  :hook ((tuareg-mode . tuareg-imenu-set-imenu)
-         (tuareg-mode . merlin-mode)))
+  (add-hook 'tuareg-mode-hook 'tuareg-imenu-set-imenu)
+  (autoload 'utop-setup-ocaml-buffer "utop" "Toplevel for OCaml" t)
+  (add-hook 'tuareg-mode-hook 'utop-setup-ocaml-buffer)
+  (add-hook 'tuareg-mode-hook 'merlin-mode))
 
 ;; web-mode
 (use-package web-mode
-  :ensure t
   :mode (("\\.phtml\\'" . web-mode)
          ("\\.tpl\\.php\\'" . web-mode)
          ("\\.[agj]sp\\'" . web-mode)
